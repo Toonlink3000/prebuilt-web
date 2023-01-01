@@ -1,6 +1,6 @@
 import prebuilt_web
 
-class MyWebsite(prebuilt_web.BuildWeb):
+class MyWebsite(prebuilt_web.Website):
 	output_folder = "output"
 
 class MainPage(prebuilt_web.Page):
