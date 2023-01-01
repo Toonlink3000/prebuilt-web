@@ -1,4 +1,5 @@
 import re
+import os
 
 class Page():
 	template_filename = ""
@@ -55,14 +56,18 @@ class Import(Page):
 
 class Website():
 	pages = []
-	output_folder = ""
+	output_folder = "."
 
 	def build(self) -> list:
 		generated_files = []
+
+		if os.path.isdir(self.output_folder) == False:
+			os.mkdir(self.output_folder)
+
 		for page in self.pages:
 			result = page.build()
 
-			with open(page.result_filename, "w") as file:
+			with open(os.path.join(self.output_folder, page.result_filename), "w") as file:
 				file.write(result)
 
 			generated_files.append(page.result_filename)
