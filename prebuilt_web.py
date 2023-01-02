@@ -1,5 +1,7 @@
 import re
 import os
+import json
+import configparser
 
 class Page():
 	template_filename = ""
@@ -16,9 +18,13 @@ class Page():
 		for param in self.template_params.keys():
 			result = re.sub(f"@/ {param} /@", self.template_params[param], result)
 
-		#check imports
-		imports = re.findall("@/ import .* /@", result)
-		split = re.split("@/ import .* /@", result)
+		result = self.process_includes(result)
+
+		return result
+
+	def process_includes(self, result):
+		imports = re.findall("@/ include .* /@", result)
+		split = re.split("@/ include .* /@", result)
 		for imp in imports:
 			values = re.findall("'[^']*=[^']*'", result)
 
@@ -33,10 +39,9 @@ class Page():
 				print(f"Error in: {imp}, file parameter is missing!")
 
 			res = Import(filename=params["file"], **params).result
-			matc = re.search("@/ import .* /@", result)
+			matc = re.search("@/ include .* /@", result)
 			span = matc.span()
 			result = result[0:span[0]] + res + result[span[1]:len(result)]
-
 		return result
 
 	def set_template(self, template:str) -> None:
@@ -54,9 +59,63 @@ class Import(Page):
 		self.template_params = kwargs
 		self.result = self.build()
 
+class Chunk():
+	template_filename = ""
+	result_extensions = ".html"
+	result_folder = os.getcwd
+	items = {}
+
+	def build(self):
+		for item in self.items.keys():
+			newpage = Page()
+			newpage.template_filename = self.template_filename
+			newpage.template_params = self.items[item]
+			newpage.result_filename = os.path.join(self.result_folder, item, self.result_extensions)
+			newpage.build()
+
+class FileFolderChunk(Chunk):
+	@classmethod
+	def load_with_ini(cls, folder):
+		files = os.listdir(folder)
+		ini_files = []
+
+		for file in files:
+			if re.fullmatch(".*[.]ini", file) != None:
+				ini_files.append(file)
+
+		for file in ini_files:
+			config = configparser.ConfigParser()
+			config.read(file)
+
+			items[file] = config["PARAMETERS"]
+
+	@classmethod
+	def load_with_json(cls, folder):
+		files = os.listdir(folder)
+		json_files = []
+
+		for file in files:
+			if re.fullmatch(".*[.]json", file) != None:
+				json_files.append(file)
+
+		for file in json_files:
+			with open(file, "r") as fl:
+				content = json.loads(fl.read())
+
+			self.items[file] = content
+
+class DataFileChunk():
+	@classmethod
+	def from_json(cls, json_string):
+		pass
+
+	@classmethod
+	def from_json_file(cls, filename):
+		pass
+
 class Website():
 	pages = []
-	output_folder = "."
+	output_folder = os.getcwd()
 
 	def build(self) -> list:
 		generated_files = []
